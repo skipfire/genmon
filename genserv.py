@@ -10,7 +10,7 @@
 
 from __future__ import print_function
 
-import sys, signal, os, socket, atexit, time, subprocess, json, threading, signal, errno, collections, getopt, ldap
+import sys, signal, os, socket, atexit, time, subprocess, json, threading, signal, errno, collections, getopt
 
 try:
     from flask import Flask, render_template, request, jsonify, session, send_file
@@ -50,7 +50,6 @@ import re, datetime
 app = Flask(__name__,static_url_path='')
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300
 
-LdapServer = None
 HTTPAuthUser = None
 HTTPAuthPass = None
 HTTPAuthUser_RO = None
@@ -149,26 +148,8 @@ def do_admin_login():
         session['write_access'] = False
         LogError("Limited Rights Login")
         return root()
-    elif doLdapLogin(request.form['username'], request.form['password']):
-        session['logged_in'] = True
-        session['write_access'] = True
-        LogError("Admin Login")
-        return root()
     else:
         return render_template('login.html')
-#-------------------------------------------------------------------------------
-def doLdapLogin(username, password):
-    if LdapServer == "":
-        return False
-    conn = ldap.initialize(LdapServer)
-    conn.protocol_version = 3
-    conn.set_option(ldap.OPT_REFERRALS, 0)
-    try:
-        conn.simple_bind_s(username, password)
-    except:
-        return False
-    else:
-        return True
 
 #-------------------------------------------------------------------------------
 @app.route("/cmd/<command>")
@@ -1255,7 +1236,6 @@ def ReadSettingsFromFile():
     ConfigSettings["http_pass_ro"] = ['password', 'Limited Rights User Password', 209, "", "", "minmax:4:50", GENMON_CONFIG, GENMON_SECTION, "http_pass_ro"]
     ConfigSettings["http_port"] = ['int', 'Port of WebServer', 210, 8000, "", "required digits", GENMON_CONFIG, GENMON_SECTION, "http_port"]
     ConfigSettings["favicon"] = ['string', 'FavIcon', 220, "", "", "minmax:8:255", GENMON_CONFIG, GENMON_SECTION, "favicon"]
-    ConfigSettings["ldap_server"] = ['string', 'LDAP Server', 230, "", "", "minmax:8:200", GENMON_CONFIG, GENMON_SECTION, "ldap_server"]
     # This does not appear to work on reload, some issue with Flask
 
     #
@@ -1559,7 +1539,6 @@ def LoadConfig():
     global clientport
     global loglocation
     global bUseSecureHTTP
-    global LdapServer
     global HTTPPort
     global HTTPAuthUser
     global HTTPAuthPass
@@ -1568,7 +1547,6 @@ def LoadConfig():
     global SSLContext
     global favicon
 
-    LdapServer = None
     HTTPAuthPass = None
     HTTPAuthUser = None
     SSLContext = None
@@ -1593,34 +1571,32 @@ def LoadConfig():
         if ConfigFiles[GENMON_CONFIG].HasOption('favicon'):
             favicon = ConfigFiles[GENMON_CONFIG].ReadValue('favicon')
 
-        if ConfigFiles[GENMON_CONFIG].HasOption('ldap_server'):
-            LdapServer = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_server', default = "")
-            LdapServer = LdapServer.strip()
-            if LdapServer == "":
-                LdapServer = None
-        if ConfigFiles[GENMON_CONFIG].HasOption('http_user'):
-            HTTPAuthUser = ConfigFiles[GENMON_CONFIG].ReadValue('http_user', default = "")
-            HTTPAuthUser = HTTPAuthUser.strip()
-                # No user name or pass specified, disable
-            if HTTPAuthUser == "":
-                HTTPAuthUser = None
-                HTTPAuthPass = None
-            elif ConfigFiles[GENMON_CONFIG].HasOption('http_pass'):
-                HTTPAuthPass = ConfigFiles[GENMON_CONFIG].ReadValue('http_pass', default = "")
-                HTTPAuthPass = HTTPAuthPass.strip()
-            if HTTPAuthUser != None and HTTPAuthPass != None:
-                if ConfigFiles[GENMON_CONFIG].HasOption('http_user_ro'):
-                    HTTPAuthUser_RO = ConfigFiles[GENMON_CONFIG].ReadValue('http_user_ro', default = "")
-                    HTTPAuthUser_RO = HTTPAuthUser_RO.strip()
-                    if HTTPAuthUser_RO == "":
-                        HTTPAuthUser_RO = None
-                        HTTPAuthPass_RO = None
-                    elif ConfigFiles[GENMON_CONFIG].HasOption('http_pass_ro'):
-                        HTTPAuthPass_RO = ConfigFiles[GENMON_CONFIG].ReadValue('http_pass_ro', default = "")
-                        HTTPAuthPass_RO = HTTPAuthPass_RO.strip()
+        # user name and password require usehttps = True
+        if bUseSecureHTTP:
+            if ConfigFiles[GENMON_CONFIG].HasOption('http_user'):
+                HTTPAuthUser = ConfigFiles[GENMON_CONFIG].ReadValue('http_user', default = "")
+                HTTPAuthUser = HTTPAuthUser.strip()
+                 # No user name or pass specified, disable
+                if HTTPAuthUser == "":
+                    HTTPAuthUser = None
+                    HTTPAuthPass = None
+                elif ConfigFiles[GENMON_CONFIG].HasOption('http_pass'):
+                    HTTPAuthPass = ConfigFiles[GENMON_CONFIG].ReadValue('http_pass', default = "")
+                    HTTPAuthPass = HTTPAuthPass.strip()
+                if HTTPAuthUser != None and HTTPAuthPass != None:
+                    if ConfigFiles[GENMON_CONFIG].HasOption('http_user_ro'):
+                        HTTPAuthUser_RO = ConfigFiles[GENMON_CONFIG].ReadValue('http_user_ro', default = "")
+                        HTTPAuthUser_RO = HTTPAuthUser_RO.strip()
+                        if HTTPAuthUser_RO == "":
+                            HTTPAuthUser_RO = None
+                            HTTPAuthPass_RO = None
+                        elif ConfigFiles[GENMON_CONFIG].HasOption('http_pass_ro'):
+                            HTTPAuthPass_RO = ConfigFiles[GENMON_CONFIG].ReadValue('http_pass_ro', default = "")
+                            HTTPAuthPass_RO = HTTPAuthPass_RO.strip()
+
+            HTTPSPort = ConfigFiles[GENMON_CONFIG].ReadValue('https_port', return_type = int, default = 443)
 
         if bUseSecureHTTP:
-            HTTPSPort = ConfigFiles[GENMON_CONFIG].ReadValue('https_port', return_type = int, default = 443)
             app.secret_key = os.urandom(12)
             OldHTTPPort = HTTPPort
             HTTPPort = HTTPSPort
