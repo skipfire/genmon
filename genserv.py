@@ -193,9 +193,9 @@ def doLdapLogin(username, password):
             for groupList in result[1].values():
                 for group in groupList:
                     LogError("Group: " + group)
-                    if group.upper().find("CN="+LdapAdminGroup.upper()) >= 0:
+                    if group.upper().find("CN="+LdapAdminGroup.upper()+",") >= 0:
                         HasAdmin = True
-                    elif group.upper().find("CN="+LdapReadOnlyGroup.upper()) >= 0:
+                    elif group.upper().find("CN="+LdapReadOnlyGroup.upper()+",") >= 0:
                         HasReadOnly = True
 
     session['logged_in'] = HasAdmin or HasReadOnly
