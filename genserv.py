@@ -1588,6 +1588,9 @@ def LoadConfig():
         if ConfigFiles[GENMON_CONFIG].HasOption('usehttps'):
             bUseSecureHTTP = ConfigFiles[GENMON_CONFIG].ReadValue('usehttps', return_type = bool)
 
+        if ConfigFiles[GENMON_CONFIG].HasOption('allowinsecurelogin'):
+            bInsecureLogin = ConfigFiles[GENMON_CONFIG].ReadValue('allowinsecurelogin', return_type = bool)
+
         if ConfigFiles[GENMON_CONFIG].HasOption('http_port'):
             HTTPPort = ConfigFiles[GENMON_CONFIG].ReadValue('http_port', return_type = int, default = 8000)
 
