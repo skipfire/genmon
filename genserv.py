@@ -1560,6 +1560,7 @@ def LoadConfig():
     global clientport
     global loglocation
     global bUseSecureHTTP
+    global bInsecureLogin
     global LdapServer
     global HTTPPort
     global HTTPAuthUser
