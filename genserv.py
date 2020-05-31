@@ -102,7 +102,6 @@ def add_header(r):
 #-------------------------------------------------------------------------------
 @app.route('/', methods=['GET'])
 def root():
-
     if HTTPAuthUser != None and HTTPAuthPass != None:
         if not session.get('logged_in'):
             return render_template('login.html')
