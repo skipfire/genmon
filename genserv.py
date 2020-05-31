@@ -10,7 +10,7 @@
 
 from __future__ import print_function
 
-import sys, signal, os, socket, atexit, time, subprocess, json, threading, signal, errno, collections, getopt, ldap
+import sys, signal, os, socket, atexit, time, subprocess, json, threading, signal, errno, collections, getopt
 
 try:
     from flask import Flask, render_template, request, jsonify, session, send_file
@@ -50,11 +50,14 @@ import re, datetime
 app = Flask(__name__,static_url_path='')
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 300
 
-LdapServer = None
 HTTPAuthUser = None
 HTTPAuthPass = None
 HTTPAuthUser_RO = None
 HTTPAuthPass_RO = None
+LdapServer = None
+LdapBase = None
+LdapAdminGroup = None
+LdapReadOnlyGroup = None
 
 bUseSecureHTTP = False
 bUseSelfSignedCert = True
@@ -156,6 +159,7 @@ def do_admin_login():
         return render_template('login.html')
     else:
         return render_template('login.html')
+
 #-------------------------------------------------------------------------------
 def doLdapLogin(username, password):
     if LdapServer == None or LdapServer == "":
@@ -1635,6 +1639,7 @@ def LoadConfig():
         if ConfigFiles[GENMON_CONFIG].HasOption('favicon'):
             favicon = ConfigFiles[GENMON_CONFIG].ReadValue('favicon')
 
+        # user name and password require usehttps = True
         if bUseSecureHTTP:
             if ConfigFiles[GENMON_CONFIG].HasOption('ldap_server'):
                 LdapServer = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_server', default = "")
@@ -1698,6 +1703,7 @@ def LoadConfig():
                         if CheckCertFiles(CertFile, KeyFile):
                             SSLContext = (CertFile, KeyFile)    # tuple
                         else:
+                            # if we get here then we have a username/login, but do not use SSL
                             HTTPPort = OldHTTPPort
                             SSLContext = None
             else:
