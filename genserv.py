@@ -1581,7 +1581,7 @@ def LoadConfig():
                 app.secret_key = os.urandom(12)
                 HTTPAuthUser = ConfigFiles[GENMON_CONFIG].ReadValue('http_user', default = "")
                 HTTPAuthUser = HTTPAuthUser.strip()
-                    # No user name or pass specified, disable
+                 # No user name or pass specified, disable
                 if HTTPAuthUser == "":
                     HTTPAuthUser = None
                     HTTPAuthPass = None
