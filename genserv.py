@@ -168,7 +168,7 @@ def doLdapLogin(username, password):
         import ldap
     except ImportError:
         LogError("LDAP import not found, run 'sudo apt-get -y install python-ldap'")
-        return
+        return False
 
     conn = ldap.initialize(LdapServer)
     conn.protocol_version = 3
