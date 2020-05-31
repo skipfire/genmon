@@ -151,25 +151,60 @@ def do_admin_login():
         LogError("Limited Rights Login")
         return root()
     elif doLdapLogin(request.form['username'], request.form['password']):
-        session['logged_in'] = True
-        session['write_access'] = True
-        LogError("Admin Login")
         return root()
+    elif request.form['username'] != "":
+        LogError("Invalid login: " + request.form['username'])
+        return render_template('login.html')
     else:
         return render_template('login.html')
 #-------------------------------------------------------------------------------
 def doLdapLogin(username, password):
-    if LdapServer == "":
+    if LdapServer == None or LdapServer == "":
         return False
+    try:
+        import ldap
+    except ImportError:
+        LogError("LDAP import not found, run 'sudo apt-get -y install python-ldap'")
+        return
+
     conn = ldap.initialize(LdapServer)
     conn.protocol_version = 3
     conn.set_option(ldap.OPT_REFERRALS, 0)
     try:
         conn.simple_bind_s(username, password)
     except:
+        LogError("Invalid login via LDAP: " + username)
         return False
+
+    HasAdmin = False
+    HasReadOnly = False
+    SplitName = username.split('\\')
+    AccountName = SplitName[1]
+    AccountName = AccountName.strip()
+    ldap.set_option(ldap.OPT_X_TLS_REQUIRE_CERT, ldap.OPT_X_TLS_NEVER)
+    search_filter="(&(objectClass=*)(member=uid="+AccountName+",$LdapBase))"
+    account_filter = "sAMAccountName="+AccountName
+    results = conn.search_s(LdapBase, ldap.SCOPE_SUBTREE, account_filter, ['memberOf'])
+    for result in results:
+        if type(result[1]) is dict:
+            for groupList in result[1].values():
+                for group in groupList:
+                    LogError("Group: " + group)
+                    if group.upper().find("CN="+LdapAdminGroup.upper()) >= 0:
+                        HasAdmin = True
+                    elif group.upper().find("CN="+LdapReadOnlyGroup.upper()) >= 0:
+                        HasReadOnly = True
+
+    session['logged_in'] = HasAdmin or HasReadOnly
+    session['write_access'] = HasAdmin
+    if HasAdmin:
+        LogError("Admin Login via LDAP")
+    elif HasReadOnly:
+        LogError("Limited Rights Login via LDAP")
     else:
-        return True
+        LogError("No rights for valid login via LDAP")
+
+    return HasAdmin or HasReadOnly
 
 #-------------------------------------------------------------------------------
 @app.route("/cmd/<command>")
@@ -1562,6 +1597,10 @@ def LoadConfig():
     global bUseSecureHTTP
     global bInsecureLogin
     global LdapServer
+    global LdapBase
+    global LdapAdminGroup
+    global LdapReadOnlyGroup
+
     global HTTPPort
     global HTTPAuthUser
     global HTTPAuthPass
@@ -1570,10 +1609,14 @@ def LoadConfig():
     global SSLContext
     global favicon
 
-    LdapServer = None
     HTTPAuthPass = None
     HTTPAuthUser = None
     SSLContext = None
+    LdapServer = None
+    LdapBase = None
+    LdapAdminGroup = None
+    LdapReadOnlyGroup = None
+
     try:
 
         # heartbeat server port, must match value in check_generator_system.py and any calling client apps
@@ -1604,6 +1647,22 @@ def LoadConfig():
                 LdapServer = LdapServer.strip()
                 if LdapServer == "":
                     LdapServer = None
+                else:
+                    if ConfigFiles[GENMON_CONFIG].HasOption('ldap_base'):
+                        LdapBase = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_base', default = "")
+                    if ConfigFiles[GENMON_CONFIG].HasOption('ldap_admingroup'):
+                        LdapAdminGroup = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_admingroup', default = "")
+                    if ConfigFiles[GENMON_CONFIG].HasOption('ldap_readonlygroup'):
+                        LdapReadOnlyGroup = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_readonlygroup', default = "")
+                    if LdapBase == "":
+                        LdapBase = None
+                    if LdapAdminGroup == "":
+                        LdapAdminGroup = None
+                    if LdapReadOnlyGroup == "":
+                        LdapReadOnlyGroup = None
+                    if LdapReadOnlyGroup == None and LdapAdminGroup == None or LdapBase == None:
+                        LdapServer = None
+
             if ConfigFiles[GENMON_CONFIG].HasOption('http_user'):
                 app.secret_key = os.urandom(12)
                 HTTPAuthUser = ConfigFiles[GENMON_CONFIG].ReadValue('http_user', default = "")
