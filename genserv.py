@@ -57,6 +57,7 @@ HTTPAuthUser_RO = None
 HTTPAuthPass_RO = None
 
 bUseSecureHTTP = False
+bInsecureLogin = False
 bUseSelfSignedCert = True
 SSLContext = None
 HTTPPort = 8000
@@ -1593,14 +1594,14 @@ def LoadConfig():
         if ConfigFiles[GENMON_CONFIG].HasOption('favicon'):
             favicon = ConfigFiles[GENMON_CONFIG].ReadValue('favicon')
 
-        # user name and password require usehttps = True
-        if bUseSecureHTTP:
+        if bUseSecureHTTP or bInsecureLogin:
             if ConfigFiles[GENMON_CONFIG].HasOption('ldap_server'):
                 LdapServer = ConfigFiles[GENMON_CONFIG].ReadValue('ldap_server', default = "")
                 LdapServer = LdapServer.strip()
                 if LdapServer == "":
                     LdapServer = None
             if ConfigFiles[GENMON_CONFIG].HasOption('http_user'):
+                app.secret_key = os.urandom(12)
                 HTTPAuthUser = ConfigFiles[GENMON_CONFIG].ReadValue('http_user', default = "")
                 HTTPAuthUser = HTTPAuthUser.strip()
                  # No user name or pass specified, disable
@@ -1621,10 +1622,7 @@ def LoadConfig():
                             HTTPAuthPass_RO = ConfigFiles[GENMON_CONFIG].ReadValue('http_pass_ro', default = "")
                             HTTPAuthPass_RO = HTTPAuthPass_RO.strip()
 
-            HTTPSPort = ConfigFiles[GENMON_CONFIG].ReadValue('https_port', return_type = int, default = 443)
-
         if bUseSecureHTTP:
-            app.secret_key = os.urandom(12)
             OldHTTPPort = HTTPPort
             HTTPPort = HTTPSPort
             if ConfigFiles[GENMON_CONFIG].HasOption('useselfsignedcert'):
