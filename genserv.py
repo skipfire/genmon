@@ -102,6 +102,7 @@ def add_header(r):
 #-------------------------------------------------------------------------------
 @app.route('/', methods=['GET'])
 def root():
+
     if HTTPAuthUser != None and HTTPAuthPass != None:
         if not session.get('logged_in'):
             return render_template('login.html')
@@ -137,6 +138,7 @@ def display_internal():
 #-------------------------------------------------------------------------------
 @app.route('/', methods=['POST'])
 def do_admin_login():
+
     if request.form['password'] == HTTPAuthPass and request.form['username'] == HTTPAuthUser:
         session['logged_in'] = True
         session['write_access'] = True
