@@ -1623,6 +1623,7 @@ def LoadConfig():
                             HTTPAuthPass_RO = HTTPAuthPass_RO.strip()
 
         if bUseSecureHTTP:
+            HTTPSPort = ConfigFiles[GENMON_CONFIG].ReadValue('https_port', return_type = int, default = 443)
             OldHTTPPort = HTTPPort
             HTTPPort = HTTPSPort
             if ConfigFiles[GENMON_CONFIG].HasOption('useselfsignedcert'):
